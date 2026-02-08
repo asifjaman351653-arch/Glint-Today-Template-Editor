@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Glint Today News Template Editor</title>
+
+  <style>
+    /* ===== ONE CUSTOM FONT FOR EVERYTHING (TTF) ===== */
+    @font-face{
+      font-family: "GlintFont";
+      src: url("fonts/GlintFont-Light.ttf") format("truetype");
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face{
+      font-family: "GlintFont";
+      src: url("fonts/GlintFont-Regular.ttf") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face{
+      font-family: "GlintFont";
+      src: url("fonts/GlintFont-Bold.ttf") format("truetype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root{
+      --bg:#f6f8fc;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --border:#e2e8f0;
+      --shadow: 0 14px 35px rgba(2, 10, 30, .10);
+
+      --top1:#15478b;
+      --top2:#082148;
+
+      --accent:#2495ed;
+      --ink:#000000;
+      --grayText:#2b2f36;
+    }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 650px at 20% 0%, #eef3ff 0%, var(--bg) 60%, #ffffff 100%);
+      color:var(--text);
+    }
+
+    /* ===== Topbar ===== */
+    .topbar{
+      position: sticky;
+      top:0;
+      z-index:50;
+      background: linear-gradient(135deg, var(--top1) 0%, var(--top2) 100%);
+      border-bottom: 1px solid rgba(255,255,255,.18);
+    }
+    .topbarInner{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      color:#fff;
+      font-weight: 900;
+    }
+    .brand img{
+      height: 34px;
+      width:auto;
+      border-radius: 10px;
+      background: rgba(255,255,255,.12);
+      padding:4px;
+      object-fit:contain;
+    }
+    .brandTitle{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-family: "GlintFont", system-ui, Arial;
+      font-weight: 700;
+    }
+
+    /* Facebook icon button */
+    .fbBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:40px;
+      height:40px;
+      border-radius:12px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.20);
+      text-decoration:none;
+      color:#fff;
+      font-weight:900;
+      font-size: 20px;
+      line-height: 1;
+      user-select:none;
+    }
+
+    .wrap{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px;
+      display:grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 14px;
+    }
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    /* ===== Stage ===== */
+    .stageWrap{ display:flex; justify-content:center; }
+    .stage{
+      position: relative;
+      width: min(520px, 92vw);
+      aspect-ratio: 1080 / 1350;
+      border-radius: 18px;
+      overflow:hidden;
+      border: 1px solid var(--border);
+      background:#fff;
+      user-select:none;
+      touch-action: none;
+    }
+
+    /* ===== LAYER ORDER (FIXED) =====
+       1) photoCanvas (bottom)
+       2) frame overlay
+       3) all text overlays (top)
+    */
+    #photoCanvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      touch-action:none;
+      cursor: grab;
+      z-index: 1; /* bottom */
+    }
+    #photoCanvas.dragging{ cursor: grabbing; }
+
+    #frameImg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+      z-index: 2; /* above photo */
+    }
+
+    /* ===== Text boxes are always top ===== */
+    .box{
+      position:absolute;
+      overflow:hidden;
+      padding: 0;
+      z-index: 3; /* top-most */
+    }
+
+    /* Bangla box (from your coords) */
+    .bnBox{
+      left: 8.995%;
+      right: 8.995%;
+      top: 13.321%;
+      height: 25.027%;
+    }
+
+    /* Category box (movable only when enabled) */
+    .catBox{
+      left: 5.637%;
+      width: 68.707%;
+      top: 6.083%;
+      height: 2.717%;
+      display:flex;
+      align-items:center;
+      color: var(--grayText);
+      font-family: "GlintFont", system-ui, Arial;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: .4px;
+      pointer-events:auto;
+      user-select:none;
+      cursor: default;
+    }
+
+    /* English one-line box */
+    .enBox{
+      left: 8.995%;
+      right: 8.995%;
+      top: 39.3%;
+      height: 3.8%;
+      display:flex;
+      align-items:center;
+      overflow:hidden;
+    }
+
+    .editable{
+      width:100%;
+      height:100%;
+      outline:none;
+      border:none;
+      background: transparent;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow:hidden;
+      padding: 0;
+      font-family: "GlintFont", system-ui, Arial; /* base */
+    }
+
+    .bnText{
+      font-weight: 700; /* base default for new text (we keep) */
+      color: var(--ink);
+      font-size: 44px;
+      line-height: 1.15;
+    }
+
+    .enText{
+      font-weight: 700;
+      color: var(--grayText);
+      font-size: 28px;
+      line-height: 1.0;
+      white-space: nowrap;
+    }
+
+    /* Controls */
+    h3{ margin: 0 0 10px; font-size: 16px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .col{ display:flex; flex-direction:column; gap:8px; }
+    label{ font-weight: 900; color:#0b1b35; }
+    input[type="file"], select{
+      width:100%;
+      padding:10px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background:#f8fafc;
+    }
+    input[type="range"]{ width: 240px; }
+    .btn{
+      appearance:none;
+      border:1px solid #0b1b35;
+      background: linear-gradient(135deg, var(--top1), var(--top2));
+      color:#fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .btn.secondary{
+      background:#fff;
+      color:#0b1b35;
+      border:1px solid var(--border);
+    }
+    .hint{
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .miniBtns button{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:8px 10px;
+      border-radius: 10px;
+      cursor:pointer;
+      font-weight:900;
+      font-family: "GlintFont", system-ui, Arial;
+      color:#0b1b35;
+    }
+    .miniBtns button.active{
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(36,149,237,.15);
+    }
+
+    .colorBtns button, .weightBtns button{
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      cursor:pointer;
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      padding: 0 10px;
+      font-family: "GlintFont", system-ui, Arial;
+      color:#0b1b35;
+    }
+
+    .swatch{
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,.15);
+      display:inline-block;
+    }
+
+    .warn{
+      display:none;
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius: 12px;
+      background:#fff1f2;
+      border:1px solid #fecaca;
+      color:#9f1239;
+      font-weight: 900;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <div class="brand">
+        <img src="logo.png" alt="Logo" />
+        <div class="brandTitle">Glint Today News Template Editor</div>
+      </div>
+
+      <a class="fbBtn" href="https://www.facebook.com/glint.tdy" target="_blank" aria-label="Facebook">f</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- ===== Left: Preview ===== -->
+    <div class="card">
+      <div class="stageWrap">
+        <div id="stage" class="stage" aria-label="Template Preview">
+          <canvas id="photoCanvas"></canvas>
+          <img id="frameImg" src="frame.png" alt="Frame" />
+
+          <div class="box catBox" id="catText">National</div>
+
+          <div class="box bnBox">
+            <div id="bnEditable" class="editable bnText" contenteditable="true" spellcheck="false"></div>
+          </div>
+
+          <div class="box enBox">
+            <div id="enEditable" class="editable enText" contenteditable="true" spellcheck="false"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        ✅ ছবিতে ক্লিক/ড্র্যাগ করে সরাও। Zoom স্লাইডার/মাউস-হুইল দিয়ে জুম।<br>
+        ✅ বাংলা টেক্সটে অংশ সিলেক্ট করে শুধু <b>কালো</b> বা <b>#2495ed</b> কালার দিতে পারবে।<br>
+        ✅ এখন বাংলা টেক্সটের অংশ সিলেক্ট করে <b>Light/Regular/Bold</b> আলাদা আলাদা করতে পারবে।<br>
+        ✅ Category Move Enable অন করলে National/Local/International লেখা ডানে-বামে টেনে নিতে পারবে।<br>
+        ✅ ছবি যত ছোট/বড়ই হোক, <b>সবদিকে (ডানে-বামে/উপরে-নিচে) ফ্রি মুভ</b> করা যাবে।
+      </div>
+
+      <div id="warn" class="warn"></div>
+    </div>
+
+    <!-- ===== Right: Controls ===== -->
+    <div class="card">
+      <h3>Controls</h3>
+
+      <div class="col">
+        <div>
+          <label>Upload Photo (JPG/PNG)</label>
+          <input id="photoInput" type="file" accept="image/*" />
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Zoom</label><br>
+            <input id="zoom" type="range" min="0.10" max="8.00" step="0.01" value="1.00" />
+          </div>
+          <button class="btn secondary" id="resetBtn" type="button">Reset Photo</button>
+        </div>
+
+        <div>
+          <label>Category</label>
+          <div class="miniBtns" id="catBtns" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <button type="button" data-cat="National" class="active">National</button>
+            <button type="button" data-cat="Local">Local</button>
+            <button type="button" data-cat="International">International</button>
+          </div>
+        </div>
+
+        <div>
+          <label>Category Font Size</label>
+          <input id="catFontSize" type="range" min="10" max="48" step="1" value="20" />
+          <div class="hint">স্লাইডার দিয়ে Category লেখা ছোট/বড় করুন।</div>
+        </div>
+
+        <div class="row" style="margin-top:4px;">
+          <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+            <input id="catMoveEnable" type="checkbox" />
+            Category Move Enable (Only Left-Right)
+          </label>
+        </div>
+        <div class="hint">অন করলে Category লেখা ধরে শুধু ডানে-বামে টানতে পারবেন।</div>
+
+        <div>
+          <label>Bangla Text Options</label>
+
+          <div class="row" style="margin-top:8px;">
+            <div>
+              <div class="hint" style="margin:0 0 6px;">Font size (Auto-fit)</div>
+              <input id="bnFontSize" type="range" min="18" max="92" step="1" value="44" />
+            </div>
+            <div>
+              <div class="hint" style="margin:0 0 6px;">Line height</div>
+              <input id="bnLineHeight" type="range" min="0.90" max="1.80" step="0.01" value="1.15" />
+            </div>
+          </div>
+
+          <!-- ✅ NEW: Selected text weight (Light/Regular/Bold) -->
+          <div class="row" style="margin-top:10px;">
+            <div class="hint" style="margin:0; font-weight:900;">Weight (Selected Text)</div>
+            <div class="weightBtns" style="display:flex; gap:8px; align-items:center;">
+              <button type="button" id="wLight" title="Light (300)">Light</button>
+              <button type="button" id="wRegular" title="Regular (400)">Regular</button>
+              <button type="button" id="wBold" title="Bold (700)">Bold</button>
+            </div>
+          </div>
+
+          <!-- keep global default weight selector (unchanged) -->
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <div class="hint" style="margin:0 0 6px;">Default Weight (New Text)</div>
+              <select id="bnWeight">
+                <option value="300">Light</option>
+                <option value="400">Regular</option>
+                <option value="700" selected>Bold</option>
+              </select>
+            </div>
+            <div class="hint" style="margin:0;">(এটা নতুন টাইপ করা টেক্সটের ডিফল্ট)</div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="hint" style="margin:0; font-weight:900;">Color (Selected Text)</div>
+            <div class="colorBtns" style="display:flex; gap:8px; align-items:center;">
+              <button type="button" id="colorBlack" title="Black"><span class="swatch" style="background:#000"></span></button>
+              <button type="button" id="colorBlue" title="#2495ed"><span class="swatch" style="background:#2495ed"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label>English One-line (fixed gray)</label>
+          <div class="row" style="margin-top:8px;">
+            <div>
+              <div class="hint" style="margin:0 0 6px;">Font size (Auto-fit)</div>
+              <input id="enFontSize" type="range" min="14" max="44" step="1" value="28" />
+            </div>
+            <div>
+              <div class="hint" style="margin:0 0 6px;">Weight</div>
+              <select id="enWeight">
+                <option value="300">Light</option>
+                <option value="400">Regular</option>
+                <option value="700" selected>Bold</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint">English টেক্সটের রং বদলানো যাবে না (ধূসর কালো)।</div>
+        </div>
+
+        <div>
+          <label>Change Main Template Frame (PNG)</label>
+          <input id="frameInput" type="file" accept="image/png" />
+          <div class="hint">এখান থেকে চাইলে পরে ফ্রেম বদলাতে পারবে।</div>
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <button class="btn" id="downloadBtn" type="button">Download PNG (1080×1350)</button>
+        </div>
+
+        <div class="hint">
+          <b>TTF ফন্ট আপলোড কীভাবে?</b><br>
+          1) রিপোর ভিতরে <code>fonts</code> ফোল্ডার বানাও<br>
+          2) এই ৩টা ফাইল দাও: <code>GlintFont-Light.ttf</code>, <code>GlintFont-Regular.ttf</code>, <code>GlintFont-Bold.ttf</code><br>
+          3) ফাইল নাম বদলালে উপররের <code>@font-face</code> এ নাম মিলিয়ে দাও
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const canvas = document.getElementById('photoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const photoInput = document.getElementById('photoInput');
+    const zoomEl = document.getElementById('zoom');
+    const resetBtn = document.getElementById('resetBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const warnEl = document.getElementById('warn');
+
+    const frameImg = document.getElementById('frameImg');
+    const frameInput = document.getElementById('frameInput');
+
+    const catText = document.getElementById('catText');
+    const catBtns = document.getElementById('catBtns');
+    const catFontSize = document.getElementById('catFontSize');
+    const catMoveEnable = document.getElementById('catMoveEnable');
+
+    const bnEditable = document.getElementById('bnEditable');
+    const enEditable = document.getElementById('enEditable');
+
+    const bnFontSize = document.getElementById('bnFontSize');
+    const bnLineHeight = document.getElementById('bnLineHeight');
+    const bnWeight = document.getElementById('bnWeight');
+
+    const enFontSize = document.getElementById('enFontSize');
+    const enWeight = document.getElementById('enWeight');
+
+    const colorBlack = document.getElementById('colorBlack');
+    const colorBlue = document.getElementById('colorBlue');
+
+    // ✅ NEW selected-weight buttons
+    const wLight = document.getElementById('wLight');
+    const wRegular = document.getElementById('wRegular');
+    const wBold = document.getElementById('wBold');
+
+    const state = {
+      img: null,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+    };
+
+    function showWarn(msg){ warnEl.style.display='block'; warnEl.textContent=msg; }
+    function hideWarn(){ warnEl.style.display='none'; warnEl.textContent=''; }
+
+    function resizeCanvasToStage(){
+      const rect = stage.getBoundingClientRect();
+      const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+    window.addEventListener('resize', resizeCanvasToStage);
+
+    // no clamp — allow free move everywhere (any zoom)
+    function clampPan(){}
+
+    function draw(){
+      const rect = stage.getBoundingClientRect();
+      const cw = rect.width, ch = rect.height;
+      ctx.clearRect(0,0,cw,ch);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0,0,cw,ch);
+
+      if(!state.img) return;
+
+      const iw = state.img.width, ih = state.img.height;
+      const cover = Math.max(cw/iw, ch/ih);
+      const s = cover * state.scale;
+
+      const w = iw*s, h = ih*s;
+      const x = (cw - w)/2 + state.panX;
+      const y = (ch - h)/2 + state.panY;
+
+      ctx.drawImage(state.img, x, y, w, h);
+    }
+
+    async function loadImageFromFile(file){
+      return new Promise((resolve,reject)=>{
+        const img = new Image();
+        img.onload = ()=>resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    photoInput.addEventListener('change', async (e)=>{
+      const file = e.target.files?.[0];
+      if(!file) return;
+      hideWarn();
+      try{
+        state.img = await loadImageFromFile(file);
+        state.scale = 1;
+        zoomEl.value = 1;
+        state.panX = 0;
+        state.panY = 0;
+        draw();
+      }catch{
+        showWarn("ছবি লোড হয়নি। অন্য ছবি দিয়ে চেষ্টা করুন।");
+      }
+    });
+
+    canvas.addEventListener('pointerdown', (e)=>{
+      if(!state.img) return;
+      state.dragging = true;
+      state.lastX = e.clientX;
+      state.lastY = e.clientY;
+      canvas.classList.add('dragging');
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e)=>{
+      if(!state.dragging) return;
+      const dx = (e.clientX - state.lastX);
+      const dy = (e.clientY - state.lastY);
+      state.lastX = e.clientX;
+      state.lastY = e.clientY;
+
+      state.panX += dx;
+      state.panY += dy;
+
+      draw();
+    });
+    canvas.addEventListener('pointerup', ()=>{
+      state.dragging = false;
+      canvas.classList.remove('dragging');
+    });
+    canvas.addEventListener('pointercancel', ()=>{
+      state.dragging = false;
+      canvas.classList.remove('dragging');
+    });
+
+    function setZoom(newZoom){
+      if(!state.img) return;
+      const z1 = Math.max(0.10, Math.min(8.00, newZoom));
+      state.scale = z1;
+      draw();
+    }
+
+    zoomEl.addEventListener('input', ()=>{
+      setZoom(parseFloat(zoomEl.value));
+    });
+
+    stage.addEventListener('wheel', (e)=>{
+      if(!state.img) return;
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY);
+      const current = state.scale;
+      const step = 0.12;
+      const next = delta > 0 ? (current * (1 - step)) : (current * (1 + step));
+      zoomEl.value = Math.max(0.10, Math.min(8.00, next)).toFixed(2);
+      setZoom(parseFloat(zoomEl.value));
+    }, {passive:false});
+
+    resetBtn.addEventListener('click', ()=>{
+      if(!state.img) return;
+      state.scale = 1;
+      zoomEl.value = 1;
+      state.panX = 0;
+      state.panY = 0;
+      draw();
+    });
+
+    frameInput.addEventListener('change', (e)=>{
+      const file = e.target.files?.[0];
+      if(!file) return;
+      hideWarn();
+      frameImg.src = URL.createObjectURL(file);
+    });
+
+    catBtns.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-cat]');
+      if(!btn) return;
+      const val = btn.getAttribute('data-cat');
+      catText.textContent = val;
+      [...catBtns.querySelectorAll('button')].forEach(b=>b.classList.toggle('active', b===btn));
+    });
+
+    catFontSize.addEventListener('input', ()=>{
+      catText.style.fontSize = catFontSize.value + "px";
+    });
+    catText.style.fontSize = catFontSize.value + "px";
+
+    let catDrag = { active:false, startX:0, startLeft:0 };
+
+    catText.addEventListener('pointerdown', (e)=>{
+      if(!catMoveEnable.checked) return;
+      catDrag.active = true;
+      catDrag.startX = e.clientX;
+      catDrag.startLeft = catText.offsetLeft;
+      catText.setPointerCapture(e.pointerId);
+      catText.style.cursor = "move";
+    });
+
+    catText.addEventListener('pointermove', (e)=>{
+      if(!catDrag.active) return;
+      const dx = e.clientX - catDrag.startX;
+      let newLeft = catDrag.startLeft + dx;
+
+      const maxLeft = stage.clientWidth - catText.offsetWidth;
+      newLeft = Math.max(0, Math.min(maxLeft, newLeft));
+      catText.style.left = newLeft + "px";
+    });
+
+    catText.addEventListener('pointerup', ()=>{
+      catDrag.active = false;
+      catText.style.cursor = catMoveEnable.checked ? "move" : "default";
+    });
+    catText.addEventListener('pointercancel', ()=>{
+      catDrag.active = false;
+      catText.style.cursor = catMoveEnable.checked ? "move" : "default";
+    });
+
+    catMoveEnable.addEventListener('change', ()=>{
+      catText.style.cursor = catMoveEnable.checked ? "move" : "default";
+    });
+
+    function fitEditableToBox(editable, baseSize, minSize=10){
+      editable.style.fontSize = baseSize + "px";
+      let size = baseSize;
+      for(let i=0; i<140; i++){
+        if(editable.scrollHeight <= editable.clientHeight && editable.scrollWidth <= editable.clientWidth) break;
+        size -= 1;
+        if(size <= minSize) break;
+        editable.style.fontSize = size + "px";
+      }
+    }
+
+    function applyBanglaStyle(){
+      bnEditable.style.lineHeight = bnLineHeight.value;
+
+      // ✅ Important: DO NOT overwrite per-selection weights
+      // We only set a base weight for unstyled text via CSS class.
+      // New typing weight is handled by bnWeight + execCommand below.
+      fitEditableToBox(bnEditable, parseInt(bnFontSize.value,10), 12);
+    }
+
+    function applyEnglishStyle(){
+      enEditable.style.fontWeight = enWeight.value;
+      fitEditableToBox(enEditable, parseInt(enFontSize.value,10), 10);
+    }
+
+    // Default empty
+    bnEditable.innerText = "";
+    enEditable.innerText = "";
+
+    bnFontSize.addEventListener('input', applyBanglaStyle);
+    bnLineHeight.addEventListener('input', applyBanglaStyle);
+
+    enFontSize.addEventListener('input', applyEnglishStyle);
+    enWeight.addEventListener('change', applyEnglishStyle);
+
+    bnEditable.addEventListener('input', applyBanglaStyle);
+    enEditable.addEventListener('input', applyEnglishStyle);
+
+    function setSelectionColor(color){
+      bnEditable.focus();
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, color);
+      applyBanglaStyle();
+    }
+    colorBlack.addEventListener('click', ()=>setSelectionColor('#000000'));
+    colorBlue.addEventListener('click', ()=>setSelectionColor('#2495ed'));
+
+    // ✅ NEW: apply weight to selected text (Light/Regular/Bold)
+    function setSelectionWeight(weight){
+      bnEditable.focus();
+      document.execCommand('styleWithCSS', false, true);
+
+      // Apply bold toggle for 700 vs not-700
+      if(weight === 700){
+        // ensure bold
+        if(!document.queryCommandState('bold')){
+          document.execCommand('bold', false, null);
+        }
+      }else{
+        // ensure not bold
+        if(document.queryCommandState('bold')){
+          document.execCommand('bold', false, null);
+        }
+        // apply explicit font-weight via inline style on selection
+        document.execCommand('foreColor', false, bnEditable.style.color || '#000000'); // keep selection alive in some browsers
+      }
+
+      // Wrap selection in <span style="font-weight:...">
+      // execCommand has no direct font-weight, so we use a safe wrapper
+      wrapSelectionWithSpan({ fontWeight: String(weight) });
+
+      applyBanglaStyle();
+    }
+
+    function wrapSelectionWithSpan(styleObj){
+      const sel = window.getSelection();
+      if(!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if(range.collapsed) return;
+
+      // Create wrapper span
+      const span = document.createElement('span');
+      for(const k in styleObj) span.style[k] = styleObj[k];
+
+      try{
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+
+        // move caret after span
+        range.setStartAfter(span);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }catch(e){
+        // fallback: ignore
+      }
+    }
+
+    wLight.addEventListener('click', ()=>setSelectionWeight(300));
+    wRegular.addEventListener('click', ()=>setSelectionWeight(400));
+    wBold.addEventListener('click', ()=>setSelectionWeight(700));
+
+    // ✅ Default Weight (New Text) — when you type next, we apply that weight
+    // We do it on keydown/selectionchange so new typing uses chosen weight.
+    function applyDefaultTypingWeight(){
+      bnEditable.focus();
+      const w = parseInt(bnWeight.value,10);
+
+      // If there's a selection, don't auto-wrap. Only set typing state.
+      const sel = window.getSelection();
+      if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed) return;
+
+      // Use bold state for 700, otherwise remove bold.
+      if(w === 700){
+        if(!document.queryCommandState('bold')){
+          document.execCommand('bold', false, null);
+        }
+      }else{
+        if(document.queryCommandState('bold')){
+          document.execCommand('bold', false, null);
+        }
+        // We can't set font-weight for typing via execCommand reliably,
+        // so we insert a zero-width span marker and keep typing inside it.
+        ensureTypingSpanWeight(w);
+      }
+    }
+
+    function ensureTypingSpanWeight(weight){
+      const sel = window.getSelection();
+      if(!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if(!range.collapsed) return;
+
+      // If already inside a span with same weight, do nothing
+      let node = sel.anchorNode;
+      while(node && node !== bnEditable){
+        if(node.nodeType === 1 && node.tagName === 'SPAN'){
+          const fw = (node.style.fontWeight || '').trim();
+          if(fw === String(weight)) return;
+        }
+        node = node.parentNode;
+      }
+
+      // Insert a span with zero-width space to carry style, and place caret inside
+      const span = document.createElement('span');
+      span.style.fontWeight = String(weight);
+      span.textContent = '\u200B'; // ZWSP
+
+      range.insertNode(span);
+
+      // Put caret inside the span, after ZWSP
+      const r = document.createRange();
+      r.setStart(span.firstChild, 1);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      // cleanup ZWSP when user types: handled by input normalizing below
+    }
+
+    // Normalize: remove stray ZWSP-only spans when possible
+    function cleanupZWSP(){
+      const spans = bnEditable.querySelectorAll('span');
+      spans.forEach(sp=>{
+        if(sp.textContent === '\u200B'){
+          // keep if caret currently inside
+          const sel = window.getSelection();
+          if(sel && sel.anchorNode && sp.contains(sel.anchorNode)) return;
+          sp.remove();
+        }
+      });
+    }
+
+    bnWeight.addEventListener('change', ()=>{
+      applyDefaultTypingWeight();
+      applyBanglaStyle();
+    });
+
+    bnEditable.addEventListener('keydown', ()=>{
+      // keep typing style consistent
+      setTimeout(applyDefaultTypingWeight, 0);
+    });
+    document.addEventListener('selectionchange', ()=>{
+      // when user clicks inside bnEditable, enforce default typing weight
+      if(document.activeElement === bnEditable){
+        applyDefaultTypingWeight();
+        cleanupZWSP();
+      }
+    });
+    bnEditable.addEventListener('input', ()=>{
+      cleanupZWSP();
+      applyBanglaStyle();
+    });
+
+    bnEditable.addEventListener('paste', (e)=>{
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+      cleanupZWSP();
+      applyBanglaStyle();
+    });
+
+    downloadBtn.addEventListener('click', async ()=>{
+      hideWarn();
+      applyBanglaStyle();
+      applyEnglishStyle();
+
+      const rect = stage.getBoundingClientRect();
+      const targetW = 1080;
+      const scale = targetW / rect.width;
+
+      try{
+        const canvasOut = await html2canvas(stage, {
+          backgroundColor: null,
+          scale: scale,
+          useCORS: true
+        });
+
+        canvasOut.toBlob((blob)=>{
+          if(!blob){
+            showWarn("ডাউনলোড তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'glint-template-1080x1350.png';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+
+      }catch(err){
+        showWarn("Export এ সমস্যা হয়েছে। ফাইল নাম/ফন্ট/ইমেজ ঠিক আছে কিনা দেখুন।");
+      }
+    });
+
+    resizeCanvasToStage();
+    applyBanglaStyle();
+    applyEnglishStyle();
+
+    // set initial typing weight state to selected default
+    setTimeout(applyDefaultTypingWeight, 0);
+  </script>
+</body>
+</html>
